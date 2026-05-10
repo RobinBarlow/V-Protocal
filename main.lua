@@ -32,7 +32,7 @@ btn.Size = UDim2.new(0, 60, 0, 60)
 btn.Position = UDim2.new(0.05, 0, 0.2, 0)
 btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 btn.Image = "rbxassetid://6031094678"
-btn.Visible = false  -- startet versteckt, Menü ist ja offen
+btn.Visible = false
 btn.Draggable = true
 btn.Active = true
 btn.ZIndex = 9999
@@ -120,26 +120,32 @@ task.spawn(function()
     end
     hookCloseButton()
 
-    -- Watchdog Loop: überwacht ob Menü unsichtbar wurde (X gedrückt)
-    while task.wait(0.5) do
+-------------------------------------------------------------------------
+-- WATCHDOG
+-------------------------------------------------------------------------
+task.spawn(function()
+    task.wait(3)
+    while task.wait(0.3) do
         pcall(function()
             local menuVisible = false
             for _, gui in pairs(game:GetService("CoreGui"):GetChildren()) do
                 if gui:IsA("ScreenGui") then
                     local main = gui:FindFirstChild("Main")
-                    if main and main.Visible then
-                        menuVisible = true
+                    if main then
+                        menuVisible = main.Visible
                     end
                 end
             end
 
-            if not menuVisible and not isMinimized then
-                -- X wurde gedrückt von außen
+            if not menuVisible then
+                -- Menü zu = Button zeigen
+                btn.Visible = true
                 isMinimized = true
+            else
+                -- Menü offen = Button verstecken
+                btn.Visible = false
+                isMinimized = false
             end
-
-            -- Button sichtbarkeit anpassen
-            btn.Visible = isMinimized
         end)
     end
 end)
