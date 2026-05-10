@@ -148,3 +148,21 @@ task.spawn(function()
         end)
     end
 end)
+
+task.spawn(function()
+    task.wait(2)
+    -- Alles im CoreGui ausgeben
+    for _, gui in pairs(game:GetService("CoreGui"):GetChildren()) do
+        print("CoreGui Kind: " .. gui.Name .. " | Typ: " .. gui.ClassName)
+        for _, child in pairs(gui:GetChildren()) do
+            print("  -> " .. child.Name .. " | " .. child.ClassName .. " | Visible: " .. tostring(child.Visible))
+        end
+    end
+    -- Alles im PlayerGui ausgeben
+    for _, gui in pairs(game:GetService("Players").LocalPlayer.PlayerGui:GetChildren()) do
+        print("PlayerGui Kind: " .. gui.Name .. " | Typ: " .. gui.ClassName)
+        for _, child in pairs(gui:GetChildren()) do
+            print("  -> " .. child.Name .. " | " .. child.ClassName .. " | Visible: " .. tostring(child.Visible))
+        end
+    end
+end)
