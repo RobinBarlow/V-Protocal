@@ -62,41 +62,61 @@ sSec:NewButton("Reset Selection", "Liste leeren", function() getgenv().SelectedI
 -- CREDITS
 Credits:NewSection("V-Protocol by Gemini")
 Credits:NewSection("Status: God Mode Active")
-
+-------------------------------------------------------------------------
+-- V-PROTOCOL ULTRA TOGGLE (Fix für das rote X)
+-------------------------------------------------------------------------
 local sg = Instance.new("ScreenGui", game:GetService("CoreGui"))
 local btn = Instance.new("ImageButton", sg)
 local ui = Instance.new("UICorner", btn)
 
 sg.Name = "VProtocolToggle"
+sg.ResetOnSpawn = false
+sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
 btn.Size = UDim2.new(0, 60, 0, 60)
-btn.Position = UDim2.new(0.02, 0, 0.2, 0)
+btn.Position = UDim2.new(0.02, 0, 0.2, 0) -- Deine Position
 btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-btn.Image = "rbxassetid://6031094678"
+btn.Image = "rbxassetid://6031094678" -- Das Logo
 btn.Draggable = true
-btn.Visible = false -- Startet unsichtbar
+btn.Visible = false -- Startet unsichtbar, da Menü offen ist
+btn.Active = true
 ui.CornerRadius = UDim.new(0, 15)
 
--- Der Schalter
+-- Die Funktion zum Wiederherstellen
 btn.MouseButton1Click:Connect(function()
-    Library:ToggleUI()
+    Library:ToggleUI() -- Öffnet das Menü
+    btn.Visible = false -- Versteckt das Viereck
 end)
 
--- Der Wachhund
+-- DER ULTIMATIVE WACHHUND
 task.spawn(function()
     local cg = game:GetService("CoreGui")
-    -- Warten auf das Haupt-Interface von Kavo
-    local gui = cg:WaitForChild("V-Protocol Tycoon God", 15)
+    -- Wir warten auf die GUI der Library
+    local gui = cg:WaitForChild("V-Protocol Tycoon God", 20)
+    
     if gui then
-        local main = gui:FindFirstChild("Main")
-        if main then
-            -- Sobald die Sichtbarkeit des Fensters sich ändert
-            main:GetPropertyChangedSignal("Visible"):Connect(function()
-                if main.Visible == false then
-                    btn.Visible = true -- Viereck zeigen
+        -- Kavo nutzt oft das Enabled Property der ScreenGui oder Visible des MainFrames
+        local mainFrame = gui:FindFirstChild("Main")
+        
+        -- Überwachung 1: Das Enabled-Property (Falls das X die ganze GUI ausschaltet)
+        gui:GetPropertyChangedSignal("Enabled"):Connect(function()
+            if gui.Enabled == false then
+                btn.Visible = true
+            else
+                btn.Visible = false
+            end
+        end)
+
+        -- Überwachung 2: Das Visible-Property (Falls nur das Frame versteckt wird)
+        if mainFrame then
+            mainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+                if mainFrame.Visible == false then
+                    btn.Visible = true
                 else
-                    btn.Visible = false -- Viereck verstecken
+                    btn.Visible = false
                 end
             end)
         end
     end
 end)
+-------------------------------------------------------------------------
