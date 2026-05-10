@@ -72,55 +72,64 @@ local pGui = player:WaitForChild("PlayerGui")
 if pGui:FindFirstChild("VProtocolToggle") then
     pGui:FindFirstChild("VProtocolToggle"):Destroy()
 end
+-------------------------------------------------------------------------
+-- V-PROTOCOL PANZER-TOGGLE (Absolute Fix)
+-------------------------------------------------------------------------
+local pGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 
-local sg = Instance.new("ScreenGui")
-local btn = Instance.new("ImageButton")
-local ui = Instance.new("UICorner")
+-- Falls vorhanden, löschen für sauberen Neustart
+if pGui:FindFirstChild("VProtocolToggle") then pGui.VProtocolToggle:Destroy() end
 
+local sg = Instance.new("ScreenGui", pGui)
 sg.Name = "VProtocolToggle"
-sg.Parent = pGui -- In PlayerGui statt CoreGui
 sg.ResetOnSpawn = false
 
+local btn = Instance.new("ImageButton", sg)
+local ui = Instance.new("UICorner", btn)
+
 btn.Name = "MiniToggle"
-btn.Parent = sg
 btn.Size = UDim2.new(0, 60, 0, 60)
-btn.Position = UDim2.new(0.05, 0, 0.15, 0) -- Ein Stück weiter rechts/unten für Mobile
-btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-btn.Image = "rbxassetid://6031094678" -- Das Logo
-btn.Active = true
-btn.Draggable = true -- Du kannst es verschieben
+btn.Position = UDim2.new(0.1, 0, 0.15, 0) -- Etwas weiter mittig, damit man es sieht
+btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+btn.Image = "rbxassetid://6031094678"
+btn.Draggable = true
 btn.Visible = false -- Startet unsichtbar
-btn.ZIndex = 999 -- Immer ganz oben
+btn.Active = true
+btn.ZIndex = 1000 -- Über ALLEM
 
 ui.CornerRadius = UDim.new(0, 15)
-ui.Parent = btn
 
--- Die Funktion zum Wiederherstellen
+-- Funktion: Viereck klicken -> Menü auf, Viereck weg
 btn.MouseButton1Click:Connect(function()
     Library:ToggleUI()
     btn.Visible = false
 end)
 
--- DER MOBILE WACHHUND (Checkt alle 0.5 Sekunden)
+-- INTEGRATION IN DAS HAUPTMENÜ (Main Tab)
+-- Such in deinem Script nach dem Bereich "MainSection" und füg das hier hinzu:
+mSec:NewButton("Menü schließen (Viereck zeigen)", "Klick hier, um das Logo zu testen", function()
+    Library:ToggleUI()
+    btn.Visible = true
+end)
+
+-- AUTOMATIK-WACHHUND (Brute Force)
 task.spawn(function()
-    while task.wait(0.5) do
-        -- Wir suchen das Menü im CoreGui
-        local cg = game:GetService("CoreGui")
-        local mainUI = cg:FindFirstChild("V-Protocol Tycoon God")
-        
-        if mainUI then
-            local mainFrame = mainUI:FindFirstChild("Main")
-            if mainFrame then
-                -- Wenn das Menü unsichtbar ist, zeige das Viereck
-                if mainFrame.Visible == false then
-                    btn.Visible = true
-                else
-                    btn.Visible = false
+    while task.wait(1) do
+        -- Wir schauen einfach, ob IRGENDEINE UI von Kavo unsichtbar ist
+        local core = game:GetService("CoreGui")
+        local found = false
+        for _, v in pairs(core:GetChildren()) do
+            if v.Name:find("V-Protocol") or v:FindFirstChild("Main") then
+                if v:FindFirstChild("Main") and v.Main.Visible == true then
+                    found = true
                 end
             end
-        else
-            -- Falls die gesamte UI (ScreenGui) weg ist
+        end
+        
+        if not found then
             btn.Visible = true
+        else
+            btn.Visible = false
         end
     end
 end)
