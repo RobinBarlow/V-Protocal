@@ -13,7 +13,30 @@ getgenv().SelectedItems = {}
 local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
 
 -------------------------------------------------------------------------
--- TASKBAR ICON (im PlayerGui, sicher)
+-- KAVO GUI DIREKT ANSPRECHEN (via CoreGui Name)
+-------------------------------------------------------------------------
+-- Kavo speichert die GUI als: game.CoreGui["V-Protocol Tycoon God"]
+local function GetKavoGui()
+    return game:GetService("CoreGui"):FindFirstChild("V-Protocol Tycoon God")
+end
+
+local function HideMenu()
+    local gui = GetKavoGui()
+    if gui then gui.Enabled = false end
+end
+
+local function ShowMenu()
+    local gui = GetKavoGui()
+    if gui then gui.Enabled = true end
+end
+
+local function MenuIsOpen()
+    local gui = GetKavoGui()
+    return gui and gui.Enabled
+end
+
+-------------------------------------------------------------------------
+-- TASKBAR ICON
 -------------------------------------------------------------------------
 local pGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 if pGui:FindFirstChild("VProtocolTaskbar") then pGui.VProtocolTaskbar:Destroy() end
@@ -34,65 +57,9 @@ btn.Draggable = true
 btn.Active = true
 btn.ZIndex = 9999
 
--------------------------------------------------------------------------
--- KAVO GUI FINDEN
--------------------------------------------------------------------------
-local kavoGui = nil
-local kavoMain = nil
-
-task.spawn(function()
-    task.wait(1.5)
-    
-    -- Suche überall
-    local function searchIn(parent)
-        for _, gui in pairs(parent:GetChildren()) do
-            if gui:IsA("ScreenGui") then
-                for _, child in pairs(gui:GetChildren()) do
-                    if child:IsA("Frame") and child.Name ~= "ControlFrame" then
-                        kavoGui = gui
-                        kavoMain = child
-                        print("GEFUNDEN: " .. gui.Name .. " -> " .. child.Name)
-                        return true
-                    end
-                end
-            end
-        end
-        return false
-    end
-    
-    if not searchIn(game:GetService("CoreGui")) then
-        searchIn(pGui)
-    end
-    
-    if not kavoMain then
-        -- Letzter Versuch: irgendein Frame überall
-        for _, gui in pairs(game:GetService("CoreGui"):GetDescendants()) do
-            if gui:IsA("Frame") and gui.Parent:IsA("ScreenGui") then
-                kavoMain = gui
-                print("FALLBACK GEFUNDEN: " .. gui:GetFullName())
-                break
-            end
-        end
-    end
-end)
-
-local function HideMenu()
-    if kavoMain then 
-        kavoMain.Visible = false
-        btn.Visible = true
-    end
-end
-
-local function ShowMenu()
-    if kavoMain then
-        kavoMain.Visible = true
-        btn.Visible = false
-    end
-end
-
--- Icon klicken = Menü öffnen
 btn.MouseButton1Click:Connect(function()
     ShowMenu()
+    btn.Visible = false
 end)
 
 -------------------------------------------------------------------------
@@ -105,6 +72,7 @@ local mSec = MainTab:NewSection("Automation")
 
 mSec:NewButton("Menü minimieren", "Icon zeigen", function()
     HideMenu()
+    btn.Visible = true
 end)
 
 mSec:NewToggle("Auto Collect Cash", "Geld sammeln", function(s)
@@ -147,14 +115,16 @@ sSec:NewButton("Reset Selection", "Leeren", function() getgenv().SelectedItems =
 Credits:NewSection("V-Protocol v3.2")
 
 -------------------------------------------------------------------------
--- WATCHDOG: X-Button erkennen
+-- WATCHDOG: erkennt X-Button (Enabled wird false)
 -------------------------------------------------------------------------
 task.spawn(function()
     task.wait(2)
-    while task.wait(0.2) do
+    while task.wait(0.3) do
         pcall(function()
-            if kavoMain and not kavoMain.Visible then
+            if not MenuIsOpen() then
                 btn.Visible = true
+            else
+                btn.Visible = false
             end
         end)
     end
