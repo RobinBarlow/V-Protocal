@@ -10,10 +10,11 @@ local convList = {"Conveyor_Plasma", "Conveyor_Astral", "Conveyor_Obsidian", "Co
 -- GLOBALS
 getgenv().Toggles = {Cash = false, Rebirth = false, Chests = false, AutoBuy = false}
 getgenv().SelectedItems = {}
+getgenv().IsSwitching = false -- Die Sperre
 local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
 
 -------------------------------------------------------------------------
--- TASKBAR ICON (Das kleine Viereck)
+-- TASKBAR ICON
 -------------------------------------------------------------------------
 local pGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 if pGui:FindFirstChild("VProtocolTaskbar") then pGui.VProtocolTaskbar:Destroy() end
@@ -29,18 +30,26 @@ btn.Name = "TaskbarIcon"
 btn.Size = UDim2.new(0, 60, 0, 60)
 btn.Position = UDim2.new(0.05, 0, 0.15, 0)
 btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-btn.Image = "rbxassetid://6031094678" -- Dein Logo
-btn.Visible = false -- Startet unsichtbar
+btn.Image = "rbxassetid://6031094678"
+btn.Visible = false 
 btn.Draggable = true
 btn.Active = true
 btn.ZIndex = 9999
 ui.CornerRadius = UDim.new(0, 15)
 
--- Wenn man aufs Viereck klickt (Wiederherstellen wie in Windows)
-btn.MouseButton1Click:Connect(function()
+-- Funktion zum Umschalten mit Sperre
+local function SafeToggle()
+    if getgenv().IsSwitching then return end
+    getgenv().IsSwitching = true
+    
     Library:ToggleUI()
-    btn.Visible = false
-end)
+    btn.Visible = not btn.Visible
+    
+    task.wait(1.5) -- Zeit für die UI zum Reagieren
+    getgenv().IsSwitching = false
+end
+
+btn.MouseButton1Click:Connect(SafeToggle)
 
 -------------------------------------------------------------------------
 -- TABS & FUNCTIONS
@@ -51,11 +60,7 @@ local Credits = Window:NewTab("V-System")
 
 local mSec = MainTab:NewSection("Automation")
 
--- MINIMIEREN BUTTON (Wie das '-' in Windows)
-mSec:NewButton("Minimieren (Viereck zeigen)", "Verschiebt das Menü in die Taskleiste", function()
-    Library:ToggleUI()
-    btn.Visible = true
-end)
+mSec:NewButton("Menü minimieren", "Verschieben ins Logo", SafeToggle)
 
 mSec:NewToggle("Auto Collect Cash", "Geld sammeln", function(s) 
     getgenv().Toggles.Cash = s
@@ -96,28 +101,28 @@ end)
 sSec:NewButton("Reset Selection", "Leeren", function() getgenv().SelectedItems = {} end)
 
 -- CREDITS
-Credits:NewSection("V-Protocol v3.0")
+Credits:NewSection("V-Protocol v3.1")
 
 -------------------------------------------------------------------------
--- DER AUTO-WACHHUND (System-Tray Logic)
+-- DER AUTO-WACHHUND (Anti-Flicker)
 -------------------------------------------------------------------------
 task.spawn(function()
     while task.wait(0.5) do
-        local menuFound = false
-        -- Wir scannen die CoreGui nach der Kavo UI
-        for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
-            if v:IsA("ScreenGui") and v:FindFirstChild("Main") then
-                if v.Main.Visible == true then
-                    menuFound = true
+        if not getgenv().IsSwitching then
+            local menuFound = false
+            for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
+                if v:IsA("ScreenGui") and v:FindFirstChild("Main") then
+                    if v.Main.Visible == true then
+                        menuFound = true
+                    end
                 end
             end
-        end
-        
-        -- Wenn das Menü NICHT sichtbar ist, zeige das Viereck
-        if not menuFound then
-            btn.Visible = true
-        else
-            btn.Visible = false
+            
+            if not menuFound then
+                btn.Visible = true
+            else
+                btn.Visible = false
+            end
         end
     end
 end)
