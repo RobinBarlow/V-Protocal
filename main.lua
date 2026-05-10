@@ -13,78 +13,7 @@ getgenv().SelectedItems = {}
 local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
 
 -------------------------------------------------------------------------
--- KAVO GUI SUCHEN (überall)
--------------------------------------------------------------------------
-local kavoGui = nil
-
-task.spawn(function()
-    task.wait(1)
-    
-    -- Suche in CoreGui (mit pcall wegen Executor-Schutz)
-    pcall(function()
-        for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
-            if v.Name == "V-Protocol Tycoon God" then
-                kavoGui = v
-                print("CoreGui gefunden!")
-            end
-        end
-    end)
-    
-    -- Suche in PlayerGui
-    if not kavoGui then
-        pcall(function()
-            for _, v in pairs(game:GetService("Players").LocalPlayer.PlayerGui:GetChildren()) do
-                if v.Name == "V-Protocol Tycoon God" then
-                    kavoGui = v
-                    print("PlayerGui gefunden!")
-                end
-            end
-        end)
-    end
-    
-    -- Suche via gethui() (Synapse/Script-Ware spezifisch)
-    if not kavoGui then
-        pcall(function()
-            for _, v in pairs(gethui():GetChildren()) do
-                if v.Name == "V-Protocol Tycoon God" then
-                    kavoGui = v
-                    print("gethui gefunden!")
-                end
-            end
-        end)
-    end
-    
-    if kavoGui then
-        print("GUI OK: " .. kavoGui:GetFullName())
-    else
-        print("GUI NICHT GEFUNDEN - nutze Library:ToggleUI Fallback")
-    end
-end)
-
-local function HideMenu()
-    if kavoGui then
-        kavoGui.Enabled = false
-    end
-end
-
-local function ShowMenu()
-    if kavoGui then
-        kavoGui.Enabled = true
-    else
-        -- Letzter Fallback
-        pcall(function() Library:ToggleUI() end)
-    end
-end
-
-local function MenuIsOpen()
-    if kavoGui then
-        return kavoGui.Enabled
-    end
-    return true
-end
-
--------------------------------------------------------------------------
--- TASKBAR ICON
+-- TASKBAR ICON (Das Viereck/Icon zum Wiederöffnen)
 -------------------------------------------------------------------------
 local pGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 if pGui:FindFirstChild("VProtocolTaskbar") then pGui.VProtocolTaskbar:Destroy() end
@@ -99,15 +28,48 @@ Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 15)
 btn.Size = UDim2.new(0, 60, 0, 60)
 btn.Position = UDim2.new(0.05, 0, 0.2, 0)
 btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-btn.Image = "rbxassetid://6031094678"
+btn.Image = "rbxassetid://6031094678" -- Dein Icon
 btn.Visible = false
 btn.Draggable = true
 btn.Active = true
 btn.ZIndex = 9999
 
+-- Wenn man auf das Viereck klickt, öffnet sich das Menü wieder
 btn.MouseButton1Click:Connect(function()
-    ShowMenu()
+    Library:ToggleUI() 
     btn.Visible = false
+end)
+
+-------------------------------------------------------------------------
+-- KAVO GUI FINDER & FIXER
+-------------------------------------------------------------------------
+task.spawn(function()
+    local kavoGui = nil
+    -- Wir warten kurz, bis Kavo fertig gerendert hat
+    while not kavoGui do
+        for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
+            if v.Name == "V-Protocol Tycoon God" then kavoGui = v end
+        end
+        if not kavoGui then
+            for _, v in pairs(pGui:GetChildren()) do
+                if v.Name == "V-Protocol Tycoon God" then kavoGui = v end
+            end
+        end
+        task.wait(0.5)
+    end
+
+    -- DER TRICK: Wir überwachen die Sichtbarkeit
+    -- Wenn das Menü geschlossen wird (egal ob durch X oder Toggle), erscheint das Viereck
+    kavoGui:GetPropertyChangedSignal("Enabled"):Connect(function()
+        if kavoGui.Enabled == false then
+            btn.Visible = true
+        else
+            btn.Visible = false
+        end
+    end)
+    
+    -- Falls es beim Start unsichtbar ist
+    if not kavoGui.Enabled then btn.Visible = true end
 end)
 
 -------------------------------------------------------------------------
@@ -118,10 +80,7 @@ local ShopTab = Window:NewTab("Merchant")
 local Credits = Window:NewTab("V-System")
 local mSec = MainTab:NewSection("Automation")
 
-mSec:NewButton("Menü minimieren", "Icon zeigen", function()
-    HideMenu()
-    btn.Visible = true
-end)
+-- Button wurde entfernt, da das System jetzt automatisch beim Schließen minimiert.
 
 mSec:NewToggle("Auto Collect Cash", "Geld sammeln", function(s)
     getgenv().Toggles.Cash = s
@@ -160,19 +119,3 @@ end)
 sSec:NewButton("Reset Selection", "Leeren", function() getgenv().SelectedItems = {} end)
 
 Credits:NewSection("V-Protocol v3.2")
-
--------------------------------------------------------------------------
--- WATCHDOG
--------------------------------------------------------------------------
-task.spawn(function()
-    task.wait(2)
-    while task.wait(0.3) do
-        pcall(function()
-            if not MenuIsOpen() then
-                btn.Visible = true
-            else
-                btn.Visible = false
-            end
-        end)
-    end
-end)
