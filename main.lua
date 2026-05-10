@@ -12,43 +12,47 @@ getgenv().Toggles = {Cash = false, Rebirth = false, Chests = false, AutoBuy = fa
 getgenv().SelectedItems = {}
 local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
 
--- 1. TOGGLE GUI ERSTELLEN (PlayerGui für Mobile Sicherheit)
+-------------------------------------------------------------------------
+-- TASKBAR ICON (Das kleine Viereck)
+-------------------------------------------------------------------------
 local pGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
-if pGui:FindFirstChild("VProtocolToggle") then pGui.VProtocolToggle:Destroy() end
+if pGui:FindFirstChild("VProtocolTaskbar") then pGui.VProtocolTaskbar:Destroy() end
 
 local sg = Instance.new("ScreenGui", pGui)
-sg.Name = "VProtocolToggle"
+sg.Name = "VProtocolTaskbar"
 sg.ResetOnSpawn = false
 
 local btn = Instance.new("ImageButton", sg)
 local ui = Instance.new("UICorner", btn)
 
-btn.Name = "MiniToggle"
+btn.Name = "TaskbarIcon"
 btn.Size = UDim2.new(0, 60, 0, 60)
-btn.Position = UDim2.new(0.1, 0, 0.15, 0)
-btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-btn.Image = "rbxassetid://6031094678"
-btn.Draggable = true
+btn.Position = UDim2.new(0.05, 0, 0.15, 0)
+btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+btn.Image = "rbxassetid://6031094678" -- Dein Logo
 btn.Visible = false -- Startet unsichtbar
+btn.Draggable = true
 btn.Active = true
-btn.ZIndex = 1000
+btn.ZIndex = 9999
 ui.CornerRadius = UDim.new(0, 15)
 
--- Funktion: Viereck klicken -> Menü auf
+-- Wenn man aufs Viereck klickt (Wiederherstellen wie in Windows)
 btn.MouseButton1Click:Connect(function()
     Library:ToggleUI()
     btn.Visible = false
 end)
 
--- 2. TABS & SECTIONS
+-------------------------------------------------------------------------
+-- TABS & FUNCTIONS
+-------------------------------------------------------------------------
 local MainTab = Window:NewTab("Main")
 local ShopTab = Window:NewTab("Merchant")
 local Credits = Window:NewTab("V-System")
 
 local mSec = MainTab:NewSection("Automation")
 
--- HIER IST DER KNOPF
-mSec:NewButton("Menü minimieren", "Zeigt das Viereck-Logo", function()
+-- MINIMIEREN BUTTON (Wie das '-' in Windows)
+mSec:NewButton("Minimieren (Viereck zeigen)", "Verschiebt das Menü in die Taskleiste", function()
     Library:ToggleUI()
     btn.Visible = true
 end)
@@ -66,7 +70,7 @@ end)
 mSec:NewToggle("Auto Pick Chests", "Kisten sammeln", function(s) getgenv().Toggles.Chests = s end)
 Remotes.ChestDrop.OnClientEvent:Connect(function(_, id) if getgenv().Toggles.Chests then Remotes.PickUpChest:FireServer(id) end end)
 
--- SHOP SECTION
+-- MERCHANT
 local sSec = ShopTab:NewSection("Multi-Select Shop")
 local function add(v) table.insert(getgenv().SelectedItems, v) end
 sSec:NewDropdown("Chambers", "Add", cList, add)
@@ -91,24 +95,26 @@ end)
 
 sSec:NewButton("Reset Selection", "Leeren", function() getgenv().SelectedItems = {} end)
 
-Credits:NewSection("V-Protocol v2.6")
+-- CREDITS
+Credits:NewSection("V-Protocol v3.0")
 
--- 3. DER WACHHUND (Checkt das 'X' Schließen)
+-------------------------------------------------------------------------
+-- DER AUTO-WACHHUND (System-Tray Logic)
+-------------------------------------------------------------------------
 task.spawn(function()
-    while task.wait(1) do
-        local core = game:GetService("CoreGui")
-        local found = false
-        -- Wir suchen nach dem Kavo Fenster
-        for _, v in pairs(core:GetChildren()) do
-            if v.Name == "V-Protocol Tycoon God" then
-                local main = v:FindFirstChild("Main")
-                if main and main.Visible == true then
-                    found = true
+    while task.wait(0.5) do
+        local menuFound = false
+        -- Wir scannen die CoreGui nach der Kavo UI
+        for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
+            if v:IsA("ScreenGui") and v:FindFirstChild("Main") then
+                if v.Main.Visible == true then
+                    menuFound = true
                 end
             end
         end
-        -- Wenn Menü weg, Viereck an
-        if not found then
+        
+        -- Wenn das Menü NICHT sichtbar ist, zeige das Viereck
+        if not menuFound then
             btn.Visible = true
         else
             btn.Visible = false
