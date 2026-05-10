@@ -13,10 +13,35 @@ getgenv().SelectedItems = {}
 local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
 
 -------------------------------------------------------------------------
+-- HAUPT-GUI FINDEN (nach Library.CreateLib)
+-------------------------------------------------------------------------
+local mainFrame = nil
+task.spawn(function()
+    task.wait(1)
+    -- Kavo speichert GUI im CoreGui
+    for _, gui in pairs(game:GetService("CoreGui"):GetChildren()) do
+        if gui:IsA("ScreenGui") and gui.Name == "V-Protocol Tycoon God" then
+            for _, child in pairs(gui:GetChildren()) do
+                if child:IsA("Frame") then
+                    mainFrame = child
+                    break
+                end
+            end
+        end
+    end
+end)
+
+local function ShowMenu()
+    if mainFrame then mainFrame.Visible = true end
+end
+
+local function HideMenu()
+    if mainFrame then mainFrame.Visible = false end
+end
+
+-------------------------------------------------------------------------
 -- TASKBAR ICON
 -------------------------------------------------------------------------
-local isMinimized = false
-
 local pGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 if pGui:FindFirstChild("VProtocolTaskbar") then pGui.VProtocolTaskbar:Destroy() end
 
@@ -25,9 +50,8 @@ sg.Name = "VProtocolTaskbar"
 sg.ResetOnSpawn = false
 
 local btn = Instance.new("ImageButton", sg)
-local ui = Instance.new("UICorner", btn)
+Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 15)
 
-btn.Name = "TaskbarIcon"
 btn.Size = UDim2.new(0, 60, 0, 60)
 btn.Position = UDim2.new(0.05, 0, 0.2, 0)
 btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -36,27 +60,25 @@ btn.Visible = false
 btn.Draggable = true
 btn.Active = true
 btn.ZIndex = 9999
-ui.CornerRadius = UDim.new(0, 15)
 
--- Klick auf Icon = Menü wieder öffnen
+-- Icon klicken = Menü öffnen
 btn.MouseButton1Click:Connect(function()
-    isMinimized = false
     btn.Visible = false
-    Library:ToggleUI()
+    ShowMenu()
 end)
 
 -------------------------------------------------------------------------
--- TABS & SECTIONS
+-- TABS
 -------------------------------------------------------------------------
 local MainTab = Window:NewTab("Main")
 local ShopTab = Window:NewTab("Merchant")
 local Credits = Window:NewTab("V-System")
 local mSec = MainTab:NewSection("Automation")
 
+-- Minimieren Button im Menü
 mSec:NewButton("Menü minimieren", "Icon zeigen", function()
-    isMinimized = true
+    HideMenu()
     btn.Visible = true
-    Library:ToggleUI()
 end)
 
 mSec:NewToggle("Auto Collect Cash", "Geld sammeln", function(s)
@@ -99,74 +121,29 @@ sSec:NewButton("Reset Selection", "Leeren", function() getgenv().SelectedItems =
 Credits:NewSection("V-Protocol v3.2")
 
 -------------------------------------------------------------------------
--- WATCHDOG: erkennt X-Button der Library automatisch
+-- WATCHDOG: erkennt X-Button der Kavo Library
 -------------------------------------------------------------------------
 task.spawn(function()
-    task.wait(2) -- warten bis Library vollständig geladen
-
-    -- X-Button der Kavo Library suchen und Hook setzen
-    local function hookCloseButton()
-        for _, gui in pairs(game:GetService("CoreGui"):GetChildren()) do
-            if gui:IsA("ScreenGui") then
-                local closeBtn = gui:FindFirstChild("Close", true)
-                if closeBtn and closeBtn:IsA("TextButton") or closeBtn and closeBtn:IsA("ImageButton") then
-                    closeBtn.MouseButton1Click:Connect(function()
-                        isMinimized = true
-                        btn.Visible = true
-                    end)
-                end
-            end
-        end
-    end
-    hookCloseButton()
-
--------------------------------------------------------------------------
--- WATCHDOG
--------------------------------------------------------------------------
--------------------------------------------------------------------------
--- WATCHDOG (mit Auto-Debug)
--------------------------------------------------------------------------
--------------------------------------------------------------------------
--- WATCHDOG (mit Auto-Debug)
--------------------------------------------------------------------------
-task.spawn(function()
-    task.wait(3)
+    task.wait(2)
     
-    -- Erstmal herausfinden wie die Library das GUI benennt
-    local targetGui = nil
-    local targetMain = nil
-    
+    -- X-Button der Library finden und Hook setzen
     for _, gui in pairs(game:GetService("CoreGui"):GetChildren()) do
-        if gui:IsA("ScreenGui") then
-            for _, child in pairs(gui:GetChildren()) do
-                if child:IsA("Frame") then
-                    targetGui = gui
-                    targetMain = child
-                end
+        if gui:IsA("ScreenGui") and gui.Name == "V-Protocol Tycoon God" then
+            local closeBtn = gui:FindFirstChild("Close", true)
+            if closeBtn then
+                closeBtn.MouseButton1Click:Connect(function()
+                    task.wait(0.1)
+                    btn.Visible = true
+                end)
             end
         end
     end
     
+    -- Loop: falls X gedrückt aber Hook hat nicht gegriffen
     while task.wait(0.3) do
         pcall(function()
-            if targetMain then
-                if targetMain.Visible then
-                    btn.Visible = false
-                else
-                    btn.Visible = true
-                end
-            else
-                -- Neu suchen falls noch nicht gefunden
-                for _, gui in pairs(game:GetService("CoreGui"):GetChildren()) do
-                    if gui:IsA("ScreenGui") and gui.Name ~= "VProtocolTaskbar" then
-                        for _, child in pairs(gui:GetChildren()) do
-                            if child:IsA("Frame") then
-                                targetGui = gui
-                                targetMain = child
-                            end
-                        end
-                    end
-                end
+            if mainFrame and not mainFrame.Visible then
+                btn.Visible = true
             end
         end)
     end
