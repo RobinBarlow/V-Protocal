@@ -10,51 +10,68 @@ local convList = {"Conveyor_Plasma", "Conveyor_Astral", "Conveyor_Obsidian", "Co
 -- GLOBALS
 getgenv().Toggles = {Cash = false, Rebirth = false, Chests = false, AutoBuy = false}
 getgenv().SelectedItems = {}
-local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
-
 -------------------------------------------------------------------------
--- REVERSE GUI TOGGLE LOGIC (V-Protocol Special)
+-- V-PROTOCOL LOGIC BRIDGE (Viereck-Logik & Auto-Detection)
 -------------------------------------------------------------------------
-local sg = Instance.new("ScreenGui", game:GetService("CoreGui"))
-local btn = Instance.new("ImageButton", sg)
-local ui = Instance.new("UICorner", btn)
+local ScreenGui = Instance.new("ScreenGui")
+local ToggleButton = Instance.new("ImageButton")
+local UICorner = Instance.new("UICorner")
 
-sg.Name = "VProtocolToggle"
-btn.Size, btn.Position, btn.BackgroundColor3 = UDim2.new(0, 60, 0, 60), UDim2.new(0.02, 0, 0.2, 0), Color3.fromRGB(20, 20, 20)
-btn.Image, btn.Draggable, ui.CornerRadius = "rbxassetid://6031094678", true, UDim.new(0, 15)
-btn.BorderColor3 = Color3.fromRGB(255, 0, 0) -- Roter Rand für V
-btn.BorderSizePixel = 2
-btn.ClipsDescendants = true
+ScreenGui.Name = "VProtocolLog"
+ScreenGui.Parent = game:GetService("CoreGui")
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- WICHTIG: Am Anfang ist das Logo UNSICHTBAR
-btn.Visible = false 
+ToggleButton.Name = "MiniToggle"
+ToggleButton.Parent = ScreenGui
+ToggleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ToggleButton.BorderSizePixel = 0
+ToggleButton.Position = UDim2.new(0.02, 0, 0.15, 0)
+ToggleButton.Size = UDim2.new(0, 60, 0, 60)
+ToggleButton.Image = "rbxassetid://6031094678" -- Das Logo
+ToggleButton.Draggable = true
+ToggleButton.Visible = false -- Startet unsichtbar
 
--- Funktion zum Umschalten
-local uiVisible = true -- Variable um den Status zu tracken
+UICorner.CornerRadius = UDim.new(0, 15)
+UICorner.Parent = ToggleButton
 
-local function toggleMainUI()
-    if uiVisible then
-        -- Haupt-UI verstecken
-        Library:ToggleUI() -- Versteckt Kavo
-        btn.Visible = true -- Mini-Logo zeigen
-        uiVisible = false
-        print("V-Protocol: Menu minimiert. Logo aktiv.")
+-- WICHTIG: Die Wachhund-Funktion
+local function SetUIVisibility(visible)
+    Library:ToggleUI() -- Triggert Kavo
+    if visible then
+        ToggleButton.Visible = false
     else
-        -- Haupt-UI zeigen
-        Library:ToggleUI() -- Zeigt Kavo
-        btn.Visible = false -- Mini-Logo verstecken
-        uiVisible = true
-        print("V-Protocol: Menu wiederhergestellt. Logo inaktiv.")
+        ToggleButton.Visible = true
     end
 end
 
--- Klick auf das Logo stellt das Hauptmenü wieder her
-btn.MouseButton1Click:Connect(function()
-    toggleMainUI()
+-- Klick aufs Viereck macht Fenster AUF und Viereck WEG
+ToggleButton.MouseButton1Click:Connect(function()
+    SetUIVisibility(true)
 end)
 
--------------------------------------------------------------------------
--- TABS & FUNCTIONS (Kavo UI)
+-- Suche nach dem Schließen-Button (X) der Kavo Library
+task.spawn(function()
+    local coreGui = game:GetService("CoreGui")
+    -- Wir warten bis die UI da ist
+    local mainUI = coreGui:WaitForChild("V-Protocol Tycoon God", 20)
+    if mainUI then
+        local mainFrame = mainUI:WaitForChild("Main")
+        
+        -- Wenn du das Fenster manuell über Kavo schließt:
+        mainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+            if mainFrame.Visible == false then
+                ToggleButton.Visible = true
+            else
+                ToggleButton.Visible = false
+            end
+        end)
+    end
+end)
+
+-- Funktion für den Button im Menü
+local function ManualMinimieren()
+    SetUIVisibility(false)
+end
 -------------------------------------------------------------------------
 local MainTab = Window:NewTab("Main")
 local ShopTab = Window:NewTab("Merchant")
