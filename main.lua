@@ -15,7 +15,7 @@ local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
 -------------------------------------------------------------------------
 -- TASKBAR ICON
 -------------------------------------------------------------------------
-local isMinimized = false  -- NEU: Zustandsvariable
+local isMinimized = false
 
 local pGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 if pGui:FindFirstChild("VProtocolTaskbar") then pGui.VProtocolTaskbar:Destroy() end
@@ -32,22 +32,17 @@ btn.Size = UDim2.new(0, 60, 0, 60)
 btn.Position = UDim2.new(0.05, 0, 0.2, 0)
 btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 btn.Image = "rbxassetid://6031094678"
-btn.Visible = false
+btn.Visible = false  -- startet versteckt, Menü ist ja offen
 btn.Draggable = true
 btn.Active = true
 btn.ZIndex = 9999
 ui.CornerRadius = UDim.new(0, 15)
 
-local function ToggleEverything()
-    Library:ToggleUI()
-    task.wait(0.1)
-end
-
 -- Klick auf Icon = Menü wieder öffnen
 btn.MouseButton1Click:Connect(function()
     isMinimized = false
-    ToggleEverything()
     btn.Visible = false
+    Library:ToggleUI()
 end)
 
 -------------------------------------------------------------------------
@@ -58,11 +53,10 @@ local ShopTab = Window:NewTab("Merchant")
 local Credits = Window:NewTab("V-System")
 local mSec = MainTab:NewSection("Automation")
 
--- Minimieren Button
 mSec:NewButton("Menü minimieren", "Icon zeigen", function()
-    isMinimized = true       -- NEU
-    ToggleEverything()
+    isMinimized = true
     btn.Visible = true
+    Library:ToggleUI()
 end)
 
 mSec:NewToggle("Auto Collect Cash", "Geld sammeln", function(s)
@@ -105,16 +99,47 @@ sSec:NewButton("Reset Selection", "Leeren", function() getgenv().SelectedItems =
 Credits:NewSection("V-Protocol v3.2")
 
 -------------------------------------------------------------------------
--- WATCHDOG (respektiert isMinimized)
+-- WATCHDOG: erkennt X-Button der Library automatisch
 -------------------------------------------------------------------------
 task.spawn(function()
-    while task.wait(1) do
-        pcall(function()
-            if isMinimized then
-                btn.Visible = true   -- minimiert = Icon anzeigen
-            else
-                btn.Visible = false  -- offen = Icon verstecken
+    task.wait(2) -- warten bis Library vollständig geladen
+
+    -- X-Button der Kavo Library suchen und Hook setzen
+    local function hookCloseButton()
+        for _, gui in pairs(game:GetService("CoreGui"):GetChildren()) do
+            if gui:IsA("ScreenGui") then
+                local closeBtn = gui:FindFirstChild("Close", true)
+                if closeBtn and closeBtn:IsA("TextButton") or closeBtn and closeBtn:IsA("ImageButton") then
+                    closeBtn.MouseButton1Click:Connect(function()
+                        isMinimized = true
+                        btn.Visible = true
+                    end)
+                end
             end
+        end
+    end
+    hookCloseButton()
+
+    -- Watchdog Loop: überwacht ob Menü unsichtbar wurde (X gedrückt)
+    while task.wait(0.5) do
+        pcall(function()
+            local menuVisible = false
+            for _, gui in pairs(game:GetService("CoreGui"):GetChildren()) do
+                if gui:IsA("ScreenGui") then
+                    local main = gui:FindFirstChild("Main")
+                    if main and main.Visible then
+                        menuVisible = true
+                    end
+                end
+            end
+
+            if not menuVisible and not isMinimized then
+                -- X wurde gedrückt von außen
+                isMinimized = true
+            end
+
+            -- Button sichtbarkeit anpassen
+            btn.Visible = isMinimized
         end)
     end
 end)
