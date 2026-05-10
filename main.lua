@@ -13,7 +13,7 @@ getgenv().SelectedItems = {}
 local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
 
 -------------------------------------------------------------------------
--- TASKBAR ICON (Das Viereck/Icon zum Wiederöffnen)
+-- TASKBAR ICON (Das 4eck)
 -------------------------------------------------------------------------
 local pGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 if pGui:FindFirstChild("VProtocolTaskbar") then pGui.VProtocolTaskbar:Destroy() end
@@ -34,42 +34,48 @@ btn.Draggable = true
 btn.Active = true
 btn.ZIndex = 9999
 
--- Wenn man auf das Viereck klickt, öffnet sich das Menü wieder
-btn.MouseButton1Click:Connect(function()
-    Library:ToggleUI() 
-    btn.Visible = false
-end)
-
 -------------------------------------------------------------------------
 -- KAVO GUI FINDER & FIXER
 -------------------------------------------------------------------------
+local kavoGui = nil
+
+local function ShowMenu()
+    if kavoGui then
+        kavoGui.Enabled = true
+        btn.Visible = false
+    else
+        pcall(function() Library:ToggleUI() end)
+    end
+end
+
+btn.MouseButton1Click:Connect(ShowMenu)
+
 task.spawn(function()
-    local kavoGui = nil
-    -- Wir warten kurz, bis Kavo fertig gerendert hat
     while not kavoGui do
-        for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
-            if v.Name == "V-Protocol Tycoon God" then kavoGui = v end
-        end
-        if not kavoGui then
-            for _, v in pairs(pGui:GetChildren()) do
-                if v.Name == "V-Protocol Tycoon God" then kavoGui = v end
+        task.wait(0.5)
+        -- Suche in allen möglichen Verzeichnissen
+        local targets = {game:GetService("CoreGui"), pGui}
+        if gethui then table.insert(targets, gethui()) end
+        
+        for _, parent in pairs(targets) do
+            local found = parent:FindFirstChild("V-Protocol Tycoon God")
+            if found then 
+                kavoGui = found 
+                break 
             end
         end
-        task.wait(0.5)
     end
-
-    -- DER TRICK: Wir überwachen die Sichtbarkeit
-    -- Wenn das Menü geschlossen wird (egal ob durch X oder Toggle), erscheint das Viereck
-    kavoGui:GetPropertyChangedSignal("Enabled"):Connect(function()
-        if kavoGui.Enabled == false then
-            btn.Visible = true
-        else
-            btn.Visible = false
-        end
-    end)
     
-    -- Falls es beim Start unsichtbar ist
-    if not kavoGui.Enabled then btn.Visible = true end
+    -- Wenn gefunden, den X-Button "umbauen"
+    local mainFrame = kavoGui:FindFirstChild("Main")
+    if mainFrame then
+        local closeBtn = mainFrame:FindFirstChild("Close") or mainFrame:FindFirstChild("Exit")
+        if closeBtn then
+            -- Wir überschreiben nicht die Funktion (schwer bei Kavo), 
+            -- aber der Watchdog unten regelt das Erscheinen des Icons.
+            print("X-Button Hook bereit.")
+        end
+    end
 end)
 
 -------------------------------------------------------------------------
@@ -80,7 +86,7 @@ local ShopTab = Window:NewTab("Merchant")
 local Credits = Window:NewTab("V-System")
 local mSec = MainTab:NewSection("Automation")
 
--- Button wurde entfernt, da das System jetzt automatisch beim Schließen minimiert.
+-- "MINIMIEREN" BUTTON WURDE ENTFERNT, DA JETZT AUTOMATISCH
 
 mSec:NewToggle("Auto Collect Cash", "Geld sammeln", function(s)
     getgenv().Toggles.Cash = s
@@ -119,3 +125,18 @@ end)
 sSec:NewButton("Reset Selection", "Leeren", function() getgenv().SelectedItems = {} end)
 
 Credits:NewSection("V-Protocol v3.2")
+
+-------------------------------------------------------------------------
+-- WATCHDOG (Sorgt dafür, dass das 4eck erscheint wenn Menu zu ist)
+-------------------------------------------------------------------------
+task.spawn(function()
+    while task.wait(0.2) do
+        if kavoGui then
+            if kavoGui.Enabled == false then
+                btn.Visible = true
+            else
+                btn.Visible = false
+            end
+        end
+    end
+end)
