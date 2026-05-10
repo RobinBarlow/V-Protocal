@@ -13,8 +13,10 @@ getgenv().SelectedItems = {}
 local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
 
 -------------------------------------------------------------------------
--- THE IMMORTAL TASKBAR ICON
+-- TASKBAR ICON
 -------------------------------------------------------------------------
+local isMinimized = false  -- NEU: Zustandsvariable
+
 local pGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 if pGui:FindFirstChild("VProtocolTaskbar") then pGui.VProtocolTaskbar:Destroy() end
 
@@ -30,39 +32,40 @@ btn.Size = UDim2.new(0, 60, 0, 60)
 btn.Position = UDim2.new(0.05, 0, 0.2, 0)
 btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 btn.Image = "rbxassetid://6031094678"
-btn.Visible = false 
+btn.Visible = false
 btn.Draggable = true
 btn.Active = true
 btn.ZIndex = 9999
 ui.CornerRadius = UDim.new(0, 15)
 
--- Die EINZIGE Funktion zum Umschalten
 local function ToggleEverything()
     Library:ToggleUI()
-    -- Wir warten kurz, damit die Library Zeit zum Umschalten hat
     task.wait(0.1)
 end
 
+-- Klick auf Icon = Menü wieder öffnen
 btn.MouseButton1Click:Connect(function()
+    isMinimized = false
     ToggleEverything()
     btn.Visible = false
 end)
 
 -------------------------------------------------------------------------
--- TABS & FUNCTIONS
+-- TABS & SECTIONS
 -------------------------------------------------------------------------
 local MainTab = Window:NewTab("Main")
 local ShopTab = Window:NewTab("Merchant")
 local Credits = Window:NewTab("V-System")
 local mSec = MainTab:NewSection("Automation")
 
--- Manueller Minimieren Button
+-- Minimieren Button
 mSec:NewButton("Menü minimieren", "Icon zeigen", function()
+    isMinimized = true       -- NEU
     ToggleEverything()
     btn.Visible = true
 end)
 
-mSec:NewToggle("Auto Collect Cash", "Geld sammeln", function(s) 
+mSec:NewToggle("Auto Collect Cash", "Geld sammeln", function(s)
     getgenv().Toggles.Cash = s
     task.spawn(function() while getgenv().Toggles.Cash do Remotes.MoveCash:FireServer() task.wait(0.2) end end)
 end)
@@ -102,33 +105,16 @@ sSec:NewButton("Reset Selection", "Leeren", function() getgenv().SelectedItems =
 Credits:NewSection("V-Protocol v3.2")
 
 -------------------------------------------------------------------------
--- DER PANZER-WACHHUND (Crash-Safe)
+-- WATCHDOG (respektiert isMinimized)
 -------------------------------------------------------------------------
 task.spawn(function()
     while task.wait(1) do
-        local success, result = pcall(function()
-            local menuOpen = false
-            -- Wir prüfen JEDE UI im CoreGui
-            for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
-                if v:IsA("ScreenGui") and v.Name == "V-Protocol Tycoon God" then
-                    local main = v:FindFirstChild("Main")
-                    if main and main.Visible == true then
-                        menuOpen = true
-                    end
-                end
-            end
-            
-            -- Setze Sichtbarkeit des Buttons basierend auf Menü-Status
-            if menuOpen then
-                btn.Visible = false
+        pcall(function()
+            if isMinimized then
+                btn.Visible = true   -- minimiert = Icon anzeigen
             else
-                btn.Visible = true
+                btn.Visible = false  -- offen = Icon verstecken
             end
         end)
-        
-        if not success then
-            -- Falls die Library die UI gelöscht hat: Button MUSS an sein
-            btn.Visible = true
-        end
     end
 end)
