@@ -6,110 +6,99 @@ getgenv().Toggles = {Cash = false, Rebirth = false, Chests = false, AutoBuy = fa
 local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
 
 -------------------------------------------------------------------------
--- DAS QUADRAT (TASKBAR ICON)
+-- 1. DAS QUADRAT (TASKBAR) ERSTELLEN
 -------------------------------------------------------------------------
--- Wir nutzen den Ordner, den dein Executor im Screenshot angezeigt hat
 local targetParent = (gethui and gethui()) or game:GetService("CoreGui")
-
-if targetParent:FindFirstChild("VProtocolTaskbar") then targetParent.VProtocolTaskbar:Destroy() end
+if targetParent:FindFirstChild("VTaskbar") then targetParent.VTaskbar:Destroy() end
 
 local sg = Instance.new("ScreenGui", targetParent)
-sg.Name = "VProtocolTaskbar"
-sg.DisplayOrder = 99999
+sg.Name = "VTaskbar"
 sg.IgnoreGuiInset = true
 
 local btn = Instance.new("TextButton", sg)
 btn.Size = UDim2.new(0, 50, 0, 50)
-btn.Position = UDim2.new(0, 15, 0.5, -25) -- Links mittig
+btn.Position = UDim2.new(0, 10, 0.5, -25)
 btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-btn.BorderSizePixel = 2
-btn.BorderColor3 = Color3.fromRGB(0, 255, 150)
-btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 btn.Text = "V"
+btn.TextColor3 = Color3.fromRGB(255, 255, 255)
 btn.TextSize = 25
-btn.Visible = false
-btn.Draggable = true
+btn.Visible = false -- Startet unsichtbar
 btn.Active = true
+btn.Draggable = true
 Instance.new("UICorner", btn)
 
 -------------------------------------------------------------------------
--- DER "ALLES-FINDER" & INJECTOR
+-- 2. DEN "-" BUTTON IN DAS MENÜ PRÜGELN
 -------------------------------------------------------------------------
-local kavoGui = nil
-
 task.spawn(function()
-    print("[DEBUG] Suche nach Kavo-Struktur in " .. targetParent.Name)
+    local foundGui = nil
     
-    while not kavoGui do
-        for _, g in pairs(targetParent:GetChildren()) do
-            -- Kavo-Guis haben immer ein "Main" Frame und darin ein "container" oder "elements"
-            if g:IsA("ScreenGui") and g:FindFirstChild("Main") then
-                kavoGui = g
-                print("[DEBUG] KAVO GEFUNDEN! Name ist: " .. g.Name)
+    -- Warteschleife, bis Kavo geladen hat
+    while not foundGui do
+        for _, v in pairs(targetParent:GetChildren()) do
+            if v:IsA("ScreenGui") and v:FindFirstChild("Main") then
+                foundGui = v
                 break
             end
         end
-        task.wait(1)
+        task.wait(0.5)
     end
 
-    local main = kavoGui.Main
-    -- Wir suchen die Kopfzeile (Kavo nennt sie oft Header)
-    local header = main:FindFirstChild("Header") or main:FindFirstChild("TopBar")
+    local main = foundGui.Main
+    -- Wir suchen den Header (Die Leiste oben)
+    local header = main:FindFirstChild("Header") or main:FindFirstChild("TopBar") or main:FindFirstChild("TitleBar")
     
+    -- Falls Kavo keinen Standardnamen nutzt, nehmen wir das erste Frame in Main
     if not header then
-        -- Fallback: Suche das oberste kleine Frame
-        for _, v in pairs(main:GetChildren()) do
-            if v:IsA("Frame") and v.Size.Y.Offset < 60 and v.Size.Y.Offset > 10 then
-                header = v
+        for _, child in pairs(main:GetChildren()) do
+            if child:IsA("Frame") and child.Size.Y.Offset < 60 then
+                header = child
                 break
             end
         end
     end
 
     if header then
-        print("[DEBUG] Header gefunden, füge '-' hinzu.")
-        
-        -- MINUS BUTTON ERSTELLEN
-        local mini = Instance.new("TextButton", header)
-        mini.Name = "CustomMinimize"
-        mini.Size = UDim2.new(0, 30, 0, 30)
-        mini.Position = UDim2.new(1, -65, 0, 5) -- Direkt links neben dem X
-        mini.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-        mini.Text = "-"
-        mini.TextColor3 = Color3.fromRGB(255, 255, 255)
-        mini.TextSize = 25
-        mini.ZIndex = 999
-        Instance.new("UICorner", mini)
+        -- HIER IST DEIN VERDAMMTES MINUS (-)
+        local minus = Instance.new("TextButton", header)
+        minus.Name = "MinimizeBtn"
+        minus.Size = UDim2.new(0, 30, 0, 30)
+        minus.Position = UDim2.new(1, -65, 0, 5) -- Direkt neben dem X
+        minus.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        minus.Text = "-"
+        minus.TextColor3 = Color3.fromRGB(255, 255, 255)
+        minus.TextSize = 25
+        minus.ZIndex = 9999
+        Instance.new("UICorner", minus)
 
-        local function minimize()
-            kavoGui.Enabled = false
+        local function doMinimize()
+            foundGui.Enabled = false
             btn.Visible = true
-            print("[DEBUG] Minimiert!")
         end
 
-        mini.MouseButton1Click:Connect(minimize)
+        -- Funktion für das Minus
+        minus.MouseButton1Click:Connect(doMinimize)
 
-        -- X-BUTTON HIJACK
-        for _, child in pairs(header:GetChildren()) do
-            if child:IsA("ImageButton") or (child:IsA("TextButton") and child.Text == "X") then
-                child.MouseButton1Click:Connect(function()
+        -- Funktion für das X (wir kapern alle Buttons im Header, die wie ein X aussehen)
+        for _, x in pairs(header:GetChildren()) do
+            if x:IsA("ImageButton") or (x:IsA("TextButton") and x.Text == "X") then
+                x.MouseButton1Click:Connect(function()
                     task.wait(0.05)
-                    minimize()
+                    doMinimize()
                 end)
             end
         end
-    end
-end)
-
-btn.MouseButton1Click:Connect(function()
-    if kavoGui then
-        kavoGui.Enabled = true
-        btn.Visible = false
+        
+        -- Taskbar Button zum Öffnen
+        btn.MouseButton1Click:Connect(function()
+            foundGui.Enabled = true
+            btn.Visible = false
+        end)
     end
 end)
 
 -------------------------------------------------------------------------
--- TABS
+-- 3. DEIN MENÜ-INHALT (Ohne den alten Minimieren-Button)
 -------------------------------------------------------------------------
 local MainTab = Window:NewTab("Main")
 local mSec = MainTab:NewSection("Automation")
@@ -119,4 +108,9 @@ mSec:NewToggle("Auto Collect Cash", "Geld sammeln", function(s)
     task.spawn(function() while getgenv().Toggles.Cash do Remotes.MoveCash:FireServer() task.wait(0.2) end end)
 end)
 
--- (Deine anderen Toggles hier...)
+mSec:NewToggle("Auto Rebirth", "Sofort Rebirth", function(s)
+    getgenv().Toggles.Rebirth = s
+    task.spawn(function() while getgenv().Toggles.Rebirth do Remotes.Rebirth:FireServer() task.wait(1) end end)
+end)
+
+-- Rest des Shops etc. hier einfügen...
