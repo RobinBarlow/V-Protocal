@@ -13,31 +13,74 @@ getgenv().SelectedItems = {}
 local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
 
 -------------------------------------------------------------------------
--- KAVO GUI DIREKT ANSPRECHEN (via CoreGui Name)
+-- KAVO GUI SUCHEN (überall)
 -------------------------------------------------------------------------
--- Kavo speichert die GUI als: game.CoreGui["V-Protocol Tycoon God"]
-local function GetKavoGui()
-    return game:GetService("CoreGui"):FindFirstChild("V-Protocol Tycoon God")
-end
+local kavoGui = nil
+
+task.spawn(function()
+    task.wait(1)
+    
+    -- Suche in CoreGui (mit pcall wegen Executor-Schutz)
+    pcall(function()
+        for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
+            if v.Name == "V-Protocol Tycoon God" then
+                kavoGui = v
+                print("CoreGui gefunden!")
+            end
+        end
+    end)
+    
+    -- Suche in PlayerGui
+    if not kavoGui then
+        pcall(function()
+            for _, v in pairs(game:GetService("Players").LocalPlayer.PlayerGui:GetChildren()) do
+                if v.Name == "V-Protocol Tycoon God" then
+                    kavoGui = v
+                    print("PlayerGui gefunden!")
+                end
+            end
+        end)
+    end
+    
+    -- Suche via gethui() (Synapse/Script-Ware spezifisch)
+    if not kavoGui then
+        pcall(function()
+            for _, v in pairs(gethui():GetChildren()) do
+                if v.Name == "V-Protocol Tycoon God" then
+                    kavoGui = v
+                    print("gethui gefunden!")
+                end
+            end
+        end)
+    end
+    
+    if kavoGui then
+        print("GUI OK: " .. kavoGui:GetFullName())
+    else
+        print("GUI NICHT GEFUNDEN - nutze Library:ToggleUI Fallback")
+    end
+end)
 
 local function HideMenu()
-    local gui = GetKavoGui()
-    if gui then gui.Enabled = false end
+    if kavoGui then
+        kavoGui.Enabled = false
+    end
 end
 
 local function ShowMenu()
-    local gui = GetKavoGui()
-    if gui then 
-        gui.Enabled = true
-        print("GUI gefunden und geöffnet: " .. gui.Name)
+    if kavoGui then
+        kavoGui.Enabled = true
     else
-        print("GUI NICHT GEFUNDEN!")
+        -- Letzter Fallback
+        pcall(function() Library:ToggleUI() end)
     end
 end
 
 local function MenuIsOpen()
-    local gui = GetKavoGui()
-    return gui and gui.Enabled
+    if kavoGui then
+        return kavoGui.Enabled
+    end
+    return true
 end
 
 -------------------------------------------------------------------------
@@ -93,7 +136,6 @@ end)
 mSec:NewToggle("Auto Pick Chests", "Kisten sammeln", function(s) getgenv().Toggles.Chests = s end)
 Remotes.ChestDrop.OnClientEvent:Connect(function(_, id) if getgenv().Toggles.Chests then Remotes.PickUpChest:FireServer(id) end end)
 
--- MERCHANT
 local sSec = ShopTab:NewSection("Multi-Select Shop")
 local function add(v) table.insert(getgenv().SelectedItems, v) end
 sSec:NewDropdown("Chambers", "Add", cList, add)
@@ -120,7 +162,7 @@ sSec:NewButton("Reset Selection", "Leeren", function() getgenv().SelectedItems =
 Credits:NewSection("V-Protocol v3.2")
 
 -------------------------------------------------------------------------
--- WATCHDOG: erkennt X-Button (Enabled wird false)
+-- WATCHDOG
 -------------------------------------------------------------------------
 task.spawn(function()
     task.wait(2)
@@ -134,4 +176,3 @@ task.spawn(function()
         end)
     end
 end)
-for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do print(v.Name, v.ClassName) end
