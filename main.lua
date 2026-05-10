@@ -10,11 +10,10 @@ local convList = {"Conveyor_Plasma", "Conveyor_Astral", "Conveyor_Obsidian", "Co
 -- GLOBALS
 getgenv().Toggles = {Cash = false, Rebirth = false, Chests = false, AutoBuy = false}
 getgenv().SelectedItems = {}
-getgenv().IsSwitching = false -- Die Sperre
 local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
 
 -------------------------------------------------------------------------
--- TASKBAR ICON
+-- THE IMMORTAL TASKBAR ICON
 -------------------------------------------------------------------------
 local pGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 if pGui:FindFirstChild("VProtocolTaskbar") then pGui.VProtocolTaskbar:Destroy() end
@@ -28,7 +27,7 @@ local ui = Instance.new("UICorner", btn)
 
 btn.Name = "TaskbarIcon"
 btn.Size = UDim2.new(0, 60, 0, 60)
-btn.Position = UDim2.new(0.05, 0, 0.15, 0)
+btn.Position = UDim2.new(0.05, 0, 0.2, 0)
 btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 btn.Image = "rbxassetid://6031094678"
 btn.Visible = false 
@@ -37,19 +36,17 @@ btn.Active = true
 btn.ZIndex = 9999
 ui.CornerRadius = UDim.new(0, 15)
 
--- Funktion zum Umschalten mit Sperre
-local function SafeToggle()
-    if getgenv().IsSwitching then return end
-    getgenv().IsSwitching = true
-    
+-- Die EINZIGE Funktion zum Umschalten
+local function ToggleEverything()
     Library:ToggleUI()
-    btn.Visible = not btn.Visible
-    
-    task.wait(1.5) -- Zeit für die UI zum Reagieren
-    getgenv().IsSwitching = false
+    -- Wir warten kurz, damit die Library Zeit zum Umschalten hat
+    task.wait(0.1)
 end
 
-btn.MouseButton1Click:Connect(SafeToggle)
+btn.MouseButton1Click:Connect(function()
+    ToggleEverything()
+    btn.Visible = false
+end)
 
 -------------------------------------------------------------------------
 -- TABS & FUNCTIONS
@@ -57,10 +54,13 @@ btn.MouseButton1Click:Connect(SafeToggle)
 local MainTab = Window:NewTab("Main")
 local ShopTab = Window:NewTab("Merchant")
 local Credits = Window:NewTab("V-System")
-
 local mSec = MainTab:NewSection("Automation")
 
-mSec:NewButton("Menü minimieren", "Verschieben ins Logo", SafeToggle)
+-- Manueller Minimieren Button
+mSec:NewButton("Menü minimieren", "Icon zeigen", function()
+    ToggleEverything()
+    btn.Visible = true
+end)
 
 mSec:NewToggle("Auto Collect Cash", "Geld sammeln", function(s) 
     getgenv().Toggles.Cash = s
@@ -97,32 +97,38 @@ sSec:NewToggle("Enable Auto-Buy", "Kaufen & Restocken", function(s)
         end
     end)
 end)
-
 sSec:NewButton("Reset Selection", "Leeren", function() getgenv().SelectedItems = {} end)
 
--- CREDITS
-Credits:NewSection("V-Protocol v3.1")
+Credits:NewSection("V-Protocol v3.2")
 
 -------------------------------------------------------------------------
--- DER AUTO-WACHHUND (Anti-Flicker)
+-- DER PANZER-WACHHUND (Crash-Safe)
 -------------------------------------------------------------------------
 task.spawn(function()
-    while task.wait(0.5) do
-        if not getgenv().IsSwitching then
-            local menuFound = false
+    while task.wait(1) do
+        local success, result = pcall(function()
+            local menuOpen = false
+            -- Wir prüfen JEDE UI im CoreGui
             for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
-                if v:IsA("ScreenGui") and v:FindFirstChild("Main") then
-                    if v.Main.Visible == true then
-                        menuFound = true
+                if v:IsA("ScreenGui") and v.Name == "V-Protocol Tycoon God" then
+                    local main = v:FindFirstChild("Main")
+                    if main and main.Visible == true then
+                        menuOpen = true
                     end
                 end
             end
             
-            if not menuFound then
-                btn.Visible = true
-            else
+            -- Setze Sichtbarkeit des Buttons basierend auf Menü-Status
+            if menuOpen then
                 btn.Visible = false
+            else
+                btn.Visible = true
             end
+        end)
+        
+        if not success then
+            -- Falls die Library die UI gelöscht hat: Button MUSS an sein
+            btn.Visible = true
         end
     end
 end)
