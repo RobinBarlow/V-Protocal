@@ -63,60 +63,64 @@ sSec:NewButton("Reset Selection", "Liste leeren", function() getgenv().SelectedI
 Credits:NewSection("V-Protocol by Gemini")
 Credits:NewSection("Status: God Mode Active")
 -------------------------------------------------------------------------
--- V-PROTOCOL ULTRA TOGGLE (Fix für das rote X)
+-- V-PROTOCOL MOBILE-SAFE TOGGLE
 -------------------------------------------------------------------------
-local sg = Instance.new("ScreenGui", game:GetService("CoreGui"))
-local btn = Instance.new("ImageButton", sg)
-local ui = Instance.new("UICorner", btn)
+local player = game:GetService("Players").LocalPlayer
+local pGui = player:WaitForChild("PlayerGui")
+
+-- Falls schon ein Toggle existiert, löschen wir ihn (verhindert Spam)
+if pGui:FindFirstChild("VProtocolToggle") then
+    pGui:FindFirstChild("VProtocolToggle"):Destroy()
+end
+
+local sg = Instance.new("ScreenGui")
+local btn = Instance.new("ImageButton")
+local ui = Instance.new("UICorner")
 
 sg.Name = "VProtocolToggle"
+sg.Parent = pGui -- In PlayerGui statt CoreGui
 sg.ResetOnSpawn = false
-sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
+btn.Name = "MiniToggle"
+btn.Parent = sg
 btn.Size = UDim2.new(0, 60, 0, 60)
-btn.Position = UDim2.new(0.02, 0, 0.2, 0) -- Deine Position
-btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+btn.Position = UDim2.new(0.05, 0, 0.15, 0) -- Ein Stück weiter rechts/unten für Mobile
+btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 btn.Image = "rbxassetid://6031094678" -- Das Logo
-btn.Draggable = true
-btn.Visible = false -- Startet unsichtbar, da Menü offen ist
 btn.Active = true
+btn.Draggable = true -- Du kannst es verschieben
+btn.Visible = false -- Startet unsichtbar
+btn.ZIndex = 999 -- Immer ganz oben
+
 ui.CornerRadius = UDim.new(0, 15)
+ui.Parent = btn
 
 -- Die Funktion zum Wiederherstellen
 btn.MouseButton1Click:Connect(function()
-    Library:ToggleUI() -- Öffnet das Menü
-    btn.Visible = false -- Versteckt das Viereck
+    Library:ToggleUI()
+    btn.Visible = false
 end)
 
--- DER ULTIMATIVE WACHHUND
+-- DER MOBILE WACHHUND (Checkt alle 0.5 Sekunden)
 task.spawn(function()
-    local cg = game:GetService("CoreGui")
-    -- Wir warten auf die GUI der Library
-    local gui = cg:WaitForChild("V-Protocol Tycoon God", 20)
-    
-    if gui then
-        -- Kavo nutzt oft das Enabled Property der ScreenGui oder Visible des MainFrames
-        local mainFrame = gui:FindFirstChild("Main")
+    while task.wait(0.5) do
+        -- Wir suchen das Menü im CoreGui
+        local cg = game:GetService("CoreGui")
+        local mainUI = cg:FindFirstChild("V-Protocol Tycoon God")
         
-        -- Überwachung 1: Das Enabled-Property (Falls das X die ganze GUI ausschaltet)
-        gui:GetPropertyChangedSignal("Enabled"):Connect(function()
-            if gui.Enabled == false then
-                btn.Visible = true
-            else
-                btn.Visible = false
-            end
-        end)
-
-        -- Überwachung 2: Das Visible-Property (Falls nur das Frame versteckt wird)
-        if mainFrame then
-            mainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+        if mainUI then
+            local mainFrame = mainUI:FindFirstChild("Main")
+            if mainFrame then
+                -- Wenn das Menü unsichtbar ist, zeige das Viereck
                 if mainFrame.Visible == false then
                     btn.Visible = true
                 else
                     btn.Visible = false
                 end
-            end)
+            end
+        else
+            -- Falls die gesamte UI (ScreenGui) weg ist
+            btn.Visible = true
         end
     end
 end)
--------------------------------------------------------------------------
