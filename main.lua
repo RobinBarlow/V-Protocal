@@ -123,28 +123,50 @@ task.spawn(function()
 -------------------------------------------------------------------------
 -- WATCHDOG
 -------------------------------------------------------------------------
+-------------------------------------------------------------------------
+-- WATCHDOG (mit Auto-Debug)
+-------------------------------------------------------------------------
+-------------------------------------------------------------------------
+-- WATCHDOG (mit Auto-Debug)
+-------------------------------------------------------------------------
 task.spawn(function()
     task.wait(3)
-    while task.wait(0.3) do
-        pcall(function()
-            local menuVisible = false
-            for _, gui in pairs(game:GetService("CoreGui"):GetChildren()) do
-                if gui:IsA("ScreenGui") then
-                    local main = gui:FindFirstChild("Main")
-                    if main then
-                        menuVisible = main.Visible
-                    end
+    
+    -- Erstmal herausfinden wie die Library das GUI benennt
+    local targetGui = nil
+    local targetMain = nil
+    
+    for _, gui in pairs(game:GetService("CoreGui"):GetChildren()) do
+        if gui:IsA("ScreenGui") then
+            for _, child in pairs(gui:GetChildren()) do
+                if child:IsA("Frame") then
+                    targetGui = gui
+                    targetMain = child
                 end
             end
-
-            if not menuVisible then
-                -- Menü zu = Button zeigen
-                btn.Visible = true
-                isMinimized = true
+        end
+    end
+    
+    while task.wait(0.3) do
+        pcall(function()
+            if targetMain then
+                if targetMain.Visible then
+                    btn.Visible = false
+                else
+                    btn.Visible = true
+                end
             else
-                -- Menü offen = Button verstecken
-                btn.Visible = false
-                isMinimized = false
+                -- Neu suchen falls noch nicht gefunden
+                for _, gui in pairs(game:GetService("CoreGui"):GetChildren()) do
+                    if gui:IsA("ScreenGui") and gui.Name ~= "VProtocolTaskbar" then
+                        for _, child in pairs(gui:GetChildren()) do
+                            if child:IsA("Frame") then
+                                targetGui = gui
+                                targetMain = child
+                            end
+                        end
+                    end
+                end
             end
         end)
     end
