@@ -27,7 +27,12 @@ end
 
 local function ShowMenu()
     local gui = GetKavoGui()
-    if gui then gui.Enabled = true end
+    if gui then 
+        gui.Enabled = true
+        print("GUI gefunden und geöffnet: " .. gui.Name)
+    else
+        print("GUI NICHT GEFUNDEN!")
+    end
 end
 
 local function MenuIsOpen()
@@ -129,3 +134,4 @@ task.spawn(function()
         end)
     end
 end)
+for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do print(v.Name, v.ClassName) end
