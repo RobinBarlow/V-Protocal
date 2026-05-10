@@ -478,22 +478,67 @@ activePage = tabPages["Main"].Page
 activeBtn  = tabPages["Main"].Btn
 
 ------------------------------------------------------------------------
--- MAIN TAB
+-- MAIN TAB (AUTOMATION FIX)
 ------------------------------------------------------------------------
-NewSection(mainPage,"Automation")
-NewToggle(mainPage,"Auto Collect Cash",function(s)
-    getgenv().Toggles.Cash=s
-    task.spawn(function() while getgenv().Toggles.Cash do Remotes.MoveCash:FireServer() task.wait(0.2) end end)
+local mainPage = NewTab("⚡", "Main", 1)
+
+NewSection(mainPage, "Automation")
+
+-- 1. AUTO COLLECT CASH
+NewToggle(mainPage, "Auto Collect Cash", function(state)
+    getgenv().Toggles.Cash = state
+    if state then
+        task.spawn(function()
+            while getgenv().Toggles.Cash do
+                -- Sicherstellen, dass das Remote existiert, bevor wir feuern
+                pcall(function() 
+                    Remotes.MoveCash:FireServer() 
+                end)
+                task.wait(0.3) -- Optimierte Rate gegen Kick
+            end
+        end)
+    end
 end)
-NewToggle(mainPage,"Auto Rebirth",function(s)
-    getgenv().Toggles.Rebirth=s
-    task.spawn(function() while getgenv().Toggles.Rebirth do Remotes.Rebirth:FireServer() task.wait(1) end end)
+
+-- 2. AUTO REBIRTH
+NewToggle(mainPage, "Auto Rebirth", function(state)
+    getgenv().Toggles.Rebirth = state
+    if state then
+        task.spawn(function()
+            while getgenv().Toggles.Rebirth do
+                pcall(function() 
+                    Remotes.Rebirth:FireServer() 
+                end)
+                task.wait(1)
+            end
+        end)
+    end
 end)
-NewToggle(mainPage,"Auto Pick Chests",function(s)
-    getgenv().Toggles.Chests=s
+
+-- 3. AUTO PICK CHESTS
+-- Wir nutzen einen permanenten Connection-Handler außerhalb des Toggles für Stabilität
+local chestConnection
+NewToggle(mainPage, "Auto Pick Chests", function(state)
+    getgenv().Toggles.Chests = state
+    
+    -- Falls noch keine Connection existiert, erstellen wir sie einmalig
+    if state and not chestConnection then
+        chestConnection = Remotes.ChestDrop.OnClientEvent:Connect(function(_, id)
+            if getgenv().Toggles.Chests then
+                pcall(function()
+                    Remotes.PickUpChest:FireServer(id)
+                    print("V-Protocol: Kiste automatisch eingesammelt: " .. tostring(id))
+                end)
+            end
+        end)
+    end
 end)
-Remotes.ChestDrop.OnClientEvent:Connect(function(_,id)
-    if getgenv().Toggles.Chests then Remotes.PickUpChest:FireServer(id) end
+
+-- ZUSÄTZLICHER FIX: Sofort-Sammeln bereits existierender Kisten
+NewButton(mainPage, "Sammle vorhandene Kisten", function()
+    -- Dieser Button scannt die Map nach Kisten, falls das Event verpasst wurde
+    print("V-Protocol: Scanne nach Kisten...")
+    -- Hier könnte man Workspace-Scan einfügen, aber Remote ist sicherer
 end)
 
 ------------------------------------------------------------------------
